@@ -72,7 +72,45 @@ def _post(endpoint: str, payload: dict, retries: int = 3) -> Optional[dict]:
     return None
 
 
+def _download_image(url: str) -> Optional[bytes]:
+    """Download image bytes, returning None on any failure."""
+    try:
+        resp = requests.get(
+            url,
+            timeout=15,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; CulersHubBot/1.0)"},
+            stream=True,
+        )
+        resp.raise_for_status()
+        content_type = resp.headers.get("content-type", "")
+        if not content_type.startswith("image/"):
+            return None
+        return resp.content
+    except Exception as exc:
+        logger.debug("Image download failed for %s: %s", url, exc)
+        return None
+
+
 def _send_photo(photo_url: str, caption: str) -> bool:
+    # First try uploading the image as bytes (bypasses hotlink/CDN restrictions)
+    image_bytes = _download_image(photo_url)
+    if image_bytes:
+        try:
+            url = f"{_API_BASE}/sendPhoto"
+            resp = requests.post(
+                url,
+                data={"chat_id": TELEGRAM_CHAT_ID, "caption": caption[:_CAPTION_LIMIT], "parse_mode": "HTML"},
+                files={"photo": ("photo.jpg", image_bytes)},
+                timeout=30,
+            )
+            data = resp.json()
+            if resp.ok:
+                return True
+            logger.error("Telegram sendPhoto (upload) error: %s", data)
+        except Exception as exc:
+            logger.error("Telegram sendPhoto (upload) network error: %s", exc)
+
+    # Fallback: pass URL directly and let Telegram fetch it
     result = _post(
         "sendPhoto",
         {

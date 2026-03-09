@@ -35,7 +35,11 @@ def _clean_text(text: str) -> str:
       3. Remove control characters     → keep only printable + normal whitespace
       4. Collapse whitespace           → no runs of spaces/newlines
     """
-    text = BeautifulSoup(text, "lxml").get_text(separator=" ")
+    if not text or not text.strip():
+        return ""
+    # Only run BS4 if the string looks like it might contain HTML
+    if "<" in text or "&" in text:
+        text = BeautifulSoup(text, "lxml").get_text(separator=" ")
     text = unicodedata.normalize("NFC", text)
     text = re.sub(r"[^\S\n\r\t ]+", " ", text)
     text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", text)
