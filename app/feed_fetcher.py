@@ -4,11 +4,10 @@ import unicodedata
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import List, Optional
-
 import feedparser
 from bs4 import BeautifulSoup
-
 from config import FEEDS, MAX_ARTICLE_AGE_HOURS
+from summarizer import summarize
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +50,40 @@ def _truncate(text: str, max_len: int) -> str:
         return text
     truncated = text[: max_len - 1].rsplit(" ", 1)[0]
     return truncated + "…"
+
+
+# ---------------------------------------------------------------------------
+# Cross-source title deduplication
+# ---------------------------------------------------------------------------
+
+_STOP_WORDS = {
+    "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for",
+    "of", "with", "by", "from", "as", "is", "was", "are", "were", "be",
+    "it", "its", "this", "that", "he", "she", "they", "we", "has", "have",
+    "after", "will", "could", "would", "about", "over",
+}
+
+
+def title_tokens(title: str) -> frozenset:
+    """Normalize a title to a frozenset of meaningful lowercase word tokens."""
+    cleaned = re.sub(r"[^\w\s]", "", title.lower())
+    return frozenset(cleaned.split()) - _STOP_WORDS
+
+
+def is_similar_title(title: str, seen: list, threshold: float = 0.5) -> bool:
+    """
+    Return True if 'title' is too similar to any title in 'seen'.
+    Uses Jaccard similarity on word token sets.
+    A threshold of 0.5 means 50 % token overlap → treated as the same story.
+    """
+    tokens = title_tokens(title)
+    if not tokens:
+        return False
+    for seen_tokens in seen:
+        union = tokens | seen_tokens
+        if union and len(tokens & seen_tokens) / len(union) >= threshold:
+            return True
+    return False
 
 
 def _extract_image(entry) -> Optional[str]:
@@ -151,7 +184,7 @@ def _parse_entry(entry, source_name: str) -> Optional[Article]:
     if not raw_html:
         raw_html = getattr(entry, "summary", "") or ""
 
-    summary = _truncate(_clean_text(raw_html), 500)
+    summary = summarize(title, _truncate(_clean_text(raw_html), 500))
     image_url = _extract_image(entry)
 
     return Article(

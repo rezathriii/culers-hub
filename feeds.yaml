@@ -1,0 +1,15 @@
+feeds:
+  - name: "Barca Blaugranes"
+    url: "https://www.barcablaugranes.com/rss/index.xml"
+
+  - name: "Barca Universal"
+    url: "https://barcauniversal.com/feed"
+
+  - name: "BarcaBlog"
+    url: "https://barcablog.com/feed"
+
+  - name: "Barcelona Football Blog"
+    url: "https://barcelonafootballblog.com/feed"
+
+  - name: "Barca News Network"
+    url: "https://barcanewsnetwork.com/feed"
