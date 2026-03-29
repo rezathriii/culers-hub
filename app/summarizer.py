@@ -8,24 +8,45 @@ import os
 from typing import Optional
 
 import requests
+import yaml
 
 logger = logging.getLogger(__name__)
 
 LLM_BASE_URL = os.getenv("LLM_BASE_URL", "http://localhost:9000")
 LLM_ENABLED = os.getenv("LLM_ENABLED", "true").lower() in ("1", "true", "yes")
 LLM_TIMEOUT = int(os.getenv("LLM_TIMEOUT", "30"))
+PROMPT_FILE = os.getenv("PROMPT_FILE", "/app/prompt.yaml")
 
-_SYSTEM_PROMPT = (
-    "You are a concise football news assistant. "
-    "Given a news article title and excerpt, write a clean 2–3 sentence summary "
-    "in English. Be factual and neutral. Do not add opinions or speculation. "
-    "Do not repeat the title. Output only the summary, nothing else."
-)
+
+def _load_system_prompt() -> str:
+    """Load system prompt from YAML file with fallback to default."""
+    try:
+        with open(PROMPT_FILE) as fh:
+            data = yaml.safe_load(fh)
+            prompt = data.get("system_prompt", "").strip()
+            if prompt:
+                logger.info(f"Loaded system prompt from {PROMPT_FILE}")
+                return prompt
+    except Exception as exc:
+        logger.warning(f"Failed to load prompt from {PROMPT_FILE}: {exc}. Using default.")
+
+    # Fallback default prompt
+    return (
+        "You are a knowledgeable football news assistant. "
+        "Given a news article title and excerpt, write an informative 4–5 sentence summary "
+        "in English that captures the key details and context. "
+        "Include the main event, relevant context, key figures involved, and significant developments. "
+        "Be factual, balanced, and neutral. Do not add opinions or speculation. "
+        "Do not repeat the title verbatim. Output only the summary, nothing else."
+    )
+
+
+_SYSTEM_PROMPT = _load_system_prompt()
 
 
 def summarize(title: str, original_excerpt: str) -> str:
     """
-    Generate a 2–3 sentence LLM summary of the article.
+    Generate a 4–5 sentence LLM summary of the article with detailed context.
     Returns the original excerpt unchanged if LLM is disabled or the call fails.
     """
     if not LLM_ENABLED:
@@ -37,7 +58,7 @@ def summarize(title: str, original_excerpt: str) -> str:
         "model": "local",
         "messages": [
             {"role": "system", "content": _SYSTEM_PROMPT},
-            {"role": "user",   "content": user_msg},
+            {"role": "user", "content": user_msg},
         ],
         "max_tokens": 120,
         "temperature": 0.3,
