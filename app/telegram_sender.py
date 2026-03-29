@@ -20,6 +20,7 @@ _MESSAGE_LIMIT = 4096
 # HTML helpers
 # ---------------------------------------------------------------------------
 
+
 def _esc(text: str) -> str:
     """Escape text for Telegram HTML parse mode."""
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
@@ -50,6 +51,7 @@ def _format_html(article: Article) -> str:
 # Telegram API calls with retry
 # ---------------------------------------------------------------------------
 
+
 def _post(endpoint: str, payload: dict, retries: int = 3) -> Optional[dict]:
     url = f"{_API_BASE}/{endpoint}"
     for attempt in range(retries):
@@ -58,17 +60,21 @@ def _post(endpoint: str, payload: dict, retries: int = 3) -> Optional[dict]:
             data = resp.json()
             if resp.ok:
                 return data
-            logger.error("Telegram %s error (attempt %d/%d): %s", endpoint, attempt + 1, retries, data)
+            logger.error(
+                "Telegram %s error (attempt %d/%d): %s", endpoint, attempt + 1, retries, data
+            )
             if resp.status_code != 429 and 400 <= resp.status_code < 500:
                 return None
             if attempt < retries - 1:
-                backoff = 2 ** attempt
+                backoff = 2**attempt
                 logger.info("Retrying in %ds…", backoff)
                 time.sleep(backoff)
         except requests.RequestException as exc:
-            logger.error("Network error on %s (attempt %d/%d): %s", endpoint, attempt + 1, retries, exc)
+            logger.error(
+                "Network error on %s (attempt %d/%d): %s", endpoint, attempt + 1, retries, exc
+            )
             if attempt < retries - 1:
-                time.sleep(2 ** attempt)
+                time.sleep(2**attempt)
     return None
 
 
@@ -99,7 +105,11 @@ def _send_photo(photo_url: str, caption: str) -> bool:
             url = f"{_API_BASE}/sendPhoto"
             resp = requests.post(
                 url,
-                data={"chat_id": TELEGRAM_CHAT_ID, "caption": caption[:_CAPTION_LIMIT], "parse_mode": "HTML"},
+                data={
+                    "chat_id": TELEGRAM_CHAT_ID,
+                    "caption": caption[:_CAPTION_LIMIT],
+                    "parse_mode": "HTML",
+                },
                 files={"photo": ("photo.jpg", image_bytes)},
                 timeout=30,
             )
@@ -140,6 +150,7 @@ def _send_message(text: str) -> bool:
 # Public API
 # ---------------------------------------------------------------------------
 
+
 def send_article(article: Article) -> bool:
     """
     Send an article to the configured Telegram channel.
@@ -152,7 +163,9 @@ def send_article(article: Article) -> bool:
     if article.image_url:
         success = _send_photo(article.image_url, caption)
         if not success:
-            logger.warning("Photo send failed for '%s'; falling back to text message", article.title)
+            logger.warning(
+                "Photo send failed for '%s'; falling back to text message", article.title
+            )
             success = _send_message(caption)
         return success
 
@@ -168,3 +181,18 @@ def verify_bot() -> bool:
         return True
     logger.error("Telegram bot verification failed. Check TELEGRAM_BOT_TOKEN.")
     return False
+
+
+def send_ops_alert(text: str, chat_id: str) -> bool:
+    """Send operational alert messages to a dedicated Telegram chat/channel."""
+    result = _post(
+        "sendMessage",
+        {
+            "chat_id": chat_id,
+            "text": _esc(text)[:_MESSAGE_LIMIT],
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True,
+        },
+        retries=2,
+    )
+    return result is not None

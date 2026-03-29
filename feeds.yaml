@@ -2,14 +2,23 @@ feeds:
   - name: "Barca Blaugranes"
     url: "https://www.barcablaugranes.com/rss/index.xml"
 
-  - name: "Barca Universal"
-    url: "https://barcauniversal.com/feed"
+  - name: "Transfermarkt"
+    url: "https://www.transfermarkt.com/rss/news"
 
-  - name: "BarcaBlog"
-    url: "https://barcablog.com/feed"
+  - name: "Marca"
+    url: "https://e00-marca.uecdn.es/rss/futbol/barcelona.xml"
 
-  - name: "Barcelona Football Blog"
-    url: "https://barcelonafootballblog.com/feed"
+  - name: "GOAL"
+    url: "https://news.google.com/rss/search?q=site:goal.com+barcelona&hl=en-US&gl=US&ceid=US:en"
 
-  - name: "Barca News Network"
-    url: "https://barcanewsnetwork.com/feed"
+  - name: "Fabrizio Romano"
+    url: "https://news.google.com/rss/search?q=%22Fabrizio+Romano%22+barcelona&hl=en-US&gl=US&ceid=US:en"
+
+  - name: "AS"
+    url: "https://news.google.com/rss/search?q=site:as.com+barcelona&hl=en-US&gl=US&ceid=US:en"
+
+  - name: "Sport"
+    url: "https://news.google.com/rss/search?q=site:sport.es+barcelona&hl=en-US&gl=US&ceid=US:en"
+
+  - name: "Mundo Deportivo"
+    url: "https://news.google.com/rss/search?q=site:mundodeportivo.com+barcelona&hl=en-US&gl=US&ceid=US:en"

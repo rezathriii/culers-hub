@@ -21,7 +21,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-
 def run_once() -> None:
     logger.info("── Checking feeds ──────────────────────────────────")
     articles = fetch_all()
@@ -49,7 +48,8 @@ def run_once() -> None:
         if is_similar_title(article.title, seen_title_tokens):
             logger.info(
                 "Skipping cross-source duplicate: [%s] %s",
-                article.source, article.title,
+                article.source,
+                article.title,
             )
             duplicate_count += 1
             continue

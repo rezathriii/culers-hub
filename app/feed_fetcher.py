@@ -27,6 +27,7 @@ class Article:
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _clean_text(text: str) -> str:
     """
     Full sanitisation pipeline applied to both title and summary:
@@ -61,10 +62,43 @@ def _truncate(text: str, max_len: int) -> str:
 # ---------------------------------------------------------------------------
 
 _STOP_WORDS = {
-    "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for",
-    "of", "with", "by", "from", "as", "is", "was", "are", "were", "be",
-    "it", "its", "this", "that", "he", "she", "they", "we", "has", "have",
-    "after", "will", "could", "would", "about", "over",
+    "a",
+    "an",
+    "the",
+    "and",
+    "or",
+    "but",
+    "in",
+    "on",
+    "at",
+    "to",
+    "for",
+    "of",
+    "with",
+    "by",
+    "from",
+    "as",
+    "is",
+    "was",
+    "are",
+    "were",
+    "be",
+    "it",
+    "its",
+    "this",
+    "that",
+    "he",
+    "she",
+    "they",
+    "we",
+    "has",
+    "have",
+    "after",
+    "will",
+    "could",
+    "would",
+    "about",
+    "over",
 }
 
 
@@ -144,9 +178,11 @@ def _extract_image(entry) -> Optional[str]:
 # Public API
 # ---------------------------------------------------------------------------
 
+
 def _parse_date(entry) -> Optional[datetime]:
     """Return a timezone-aware UTC datetime from feedparser's parsed time structs."""
     import calendar
+
     for field in ("published_parsed", "updated_parsed"):
         val = entry.get(field)
         if val:
@@ -214,6 +250,7 @@ def fetch_feed(source_name: str, url: str) -> List[Article]:
             if article:
                 articles.append(article)
         logger.info("Fetched %d articles from %s", len(articles), source_name)
+        return articles
     except Exception:
         logger.exception("Unexpected error fetching feed [%s] %s", source_name, url)
     return articles
