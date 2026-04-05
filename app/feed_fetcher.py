@@ -1,13 +1,21 @@
 import logging
 import re
 import unicodedata
+import hashlib
+import html
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import List, Optional
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 import feedparser
 from bs4 import BeautifulSoup
-from config import FEEDS, MAX_ARTICLE_AGE_HOURS
-from summarizer import summarize
+from config import (
+    DEDUP_SIMILARITY_THRESHOLD,
+    FEEDS,
+    MAX_ARTICLE_AGE_HOURS,
+    TRANSLATE_TO_PERSIAN,
+)
+from summarizer import summarize, translate_to_persian
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +29,9 @@ class Article:
     summary: str
     image_url: Optional[str]
     published_at: Optional[datetime]
+    canonical_url: str
+    title_key: str
+    content_hash: str
 
 
 # ---------------------------------------------------------------------------
@@ -55,6 +66,46 @@ def _truncate(text: str, max_len: int) -> str:
         return text
     truncated = text[: max_len - 1].rsplit(" ", 1)[0]
     return truncated + "…"
+
+
+def canonicalize_url(url: str) -> str:
+    """Normalize URLs so tracking-query variants map to the same key."""
+    if not url:
+        return ""
+    try:
+        split = urlsplit(url.strip())
+        query_pairs = [
+            (k, v)
+            for k, v in parse_qsl(split.query, keep_blank_values=True)
+            if not (k.startswith("utm_") or k in {"fbclid", "gclid", "igshid", "mc_cid", "mc_eid"})
+        ]
+        query = urlencode(sorted(query_pairs), doseq=True)
+        normalized_path = re.sub(r"/{2,}", "/", split.path.rstrip("/"))
+        return urlunsplit(
+            (
+                split.scheme.lower(),
+                split.netloc.lower(),
+                normalized_path,
+                query,
+                "",
+            )
+        )
+    except Exception:
+        return url.strip()
+
+
+def normalize_title(title: str) -> str:
+    """Normalize title text for stable duplicate comparisons."""
+    normalized = _clean_text(html.unescape(title or "")).lower()
+    normalized = re.sub(r"[\W_]+", " ", normalized)
+    normalized = re.sub(r"\s+", " ", normalized)
+    return normalized.strip()
+
+
+def article_content_hash(title: str, summary: str) -> str:
+    """Create stable hash fingerprint from normalized title and summary excerpt."""
+    payload = f"{normalize_title(title)}|||{_clean_text(summary).lower()[:300]}"
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
 
 
 # ---------------------------------------------------------------------------
@@ -99,16 +150,43 @@ _STOP_WORDS = {
     "would",
     "about",
     "over",
+    "vs",
+    "fc",
+    "cf",
+    "barcelona",
+    "barca",
+    "در",
+    "به",
+    "از",
+    "با",
+    "برای",
+    "این",
+    "آن",
+    "که",
+    "و",
+    "la",
+    "el",
+    "los",
+    "las",
+    "de",
+    "del",
+    "y",
+    "en",
 }
 
 
 def title_tokens(title: str) -> frozenset:
     """Normalize a title to a frozenset of meaningful lowercase word tokens."""
-    cleaned = re.sub(r"[^\w\s]", "", title.lower())
-    return frozenset(cleaned.split()) - _STOP_WORDS
+    cleaned = normalize_title(title)
+    tokens = {tok for tok in cleaned.split() if tok not in _STOP_WORDS and len(tok) > 1}
+    return frozenset(tokens)
 
 
-def is_similar_title(title: str, seen: list, threshold: float = 0.5) -> bool:
+def is_similar_title(
+    title: str,
+    seen: list,
+    threshold: float = DEDUP_SIMILARITY_THRESHOLD,
+) -> bool:
     """
     Return True if 'title' is too similar to any title in 'seen'.
     Uses Jaccard similarity on word token sets.
@@ -225,6 +303,14 @@ def _parse_entry(entry, source_name: str) -> Optional[Article]:
         raw_html = getattr(entry, "summary", "") or ""
 
     summary = summarize(title, _truncate(_clean_text(raw_html), 500))
+    canonical_url = canonicalize_url(link)
+    title_key = normalize_title(title)
+    content_hash = article_content_hash(title, summary)
+
+    if TRANSLATE_TO_PERSIAN:
+        title = translate_to_persian(title)
+        summary = translate_to_persian(summary)
+
     image_url = _extract_image(entry)
 
     return Article(
@@ -235,6 +321,9 @@ def _parse_entry(entry, source_name: str) -> Optional[Article]:
         summary=summary,
         image_url=image_url,
         published_at=published_at,
+        canonical_url=canonical_url,
+        title_key=title_key,
+        content_hash=content_hash,
     )
 
 

@@ -8,7 +8,7 @@ Every `CHECK_INTERVAL_MINUTES`, the bot:
 
 1. Fetches all configured feeds from `feeds.yaml`.
 2. Cleans and summarizes articles (optional local LLM).
-3. Deduplicates by previously sent IDs and cross-source title similarity.
+3. Deduplicates aggressively by sent ID, canonical URL, content hash, normalized title key, and cross-source fuzzy title similarity.
 4. Sends new items to Telegram with image when available.
 
 ## Requirements
@@ -50,9 +50,12 @@ Key variables in `.env`:
 - `CHECK_INTERVAL_MINUTES` default `30`
 - `MAX_ARTICLE_AGE_HOURS` default `1` (`0` disables age filter)
 - `SEND_INTERVAL_SECONDS` default `60`
+- `DEDUP_SIMILARITY_THRESHOLD` default `0.35` (aggressive dedup)
 - `LLM_ENABLED` default `true`
 - `LLM_BASE_URL` default `http://localhost:9000`
 - `LLM_TIMEOUT` default `30`
+- `TRANSLATE_TO_PERSIAN` default `false`
+- `LLM_TRANSLATION_TIMEOUT` default `LLM_TIMEOUT`
 
 ## Feeds
 

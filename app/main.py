@@ -9,7 +9,14 @@ import sys
 import time
 from config import CHECK_INTERVAL_MINUTES, FEEDS, SEND_INTERVAL_SECONDS
 from feed_fetcher import fetch_all, is_similar_title, title_tokens
-from storage import init_db, is_sent, mark_sent
+from storage import (
+    init_db,
+    is_sent,
+    is_sent_by_content_hash,
+    is_sent_by_title_key,
+    is_sent_by_url,
+    mark_sent,
+)
 from telegram_sender import send_article, verify_bot
 
 logging.basicConfig(
@@ -36,16 +43,41 @@ def run_once() -> None:
     seen_title_tokens: list = []
 
     for article in articles:
-        tokens = title_tokens(article.title)
+        tokens = title_tokens(article.title_key)
 
         if is_sent(article.id):
             # Already sent in a previous cycle — seed the seen-title set so
             # cross-source duplicates of this story are filtered this cycle too.
             seen_title_tokens.append(tokens)
             skipped_count += 1
+            logger.info("Skipping duplicate by id: [%s] %s", article.source, article.title)
             continue
 
-        if is_similar_title(article.title, seen_title_tokens):
+        if is_sent_by_url(article.canonical_url):
+            seen_title_tokens.append(tokens)
+            skipped_count += 1
+            logger.info(
+                "Skipping duplicate by canonical URL: [%s] %s", article.source, article.title
+            )
+            continue
+
+        if is_sent_by_content_hash(article.content_hash):
+            seen_title_tokens.append(tokens)
+            skipped_count += 1
+            logger.info(
+                "Skipping duplicate by content hash: [%s] %s", article.source, article.title
+            )
+            continue
+
+        if is_sent_by_title_key(article.title_key):
+            seen_title_tokens.append(tokens)
+            skipped_count += 1
+            logger.info(
+                "Skipping duplicate by normalized title: [%s] %s", article.source, article.title
+            )
+            continue
+
+        if is_similar_title(article.title_key, seen_title_tokens):
             logger.info(
                 "Skipping cross-source duplicate: [%s] %s",
                 article.source,
@@ -57,7 +89,12 @@ def run_once() -> None:
         logger.info("Sending: [%s] %s", article.source, article.title)
         success = send_article(article)
         if success:
-            mark_sent(article.id)
+            mark_sent(
+                article.id,
+                canonical_url=article.canonical_url,
+                title_key=article.title_key,
+                content_hash=article.content_hash,
+            )
             seen_title_tokens.append(tokens)
             sent_count += 1
             time.sleep(SEND_INTERVAL_SECONDS)
