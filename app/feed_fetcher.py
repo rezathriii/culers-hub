@@ -13,9 +13,9 @@ from config import (
     DEDUP_SIMILARITY_THRESHOLD,
     FEEDS,
     MAX_ARTICLE_AGE_HOURS,
-    TRANSLATE_TO_PERSIAN,
+    TRANSLATE_TO_ENGLISH,
 )
-from summarizer import summarize, translate_to_persian
+from summarizer import summarize, translate_to_english
 
 logger = logging.getLogger(__name__)
 
@@ -307,9 +307,9 @@ def _parse_entry(entry, source_name: str) -> Optional[Article]:
     title_key = normalize_title(title)
     content_hash = article_content_hash(title, summary)
 
-    if TRANSLATE_TO_PERSIAN:
-        title = translate_to_persian(title)
-        summary = translate_to_persian(summary)
+    if TRANSLATE_TO_ENGLISH:
+        title = translate_to_english(title)
+        summary = translate_to_english(summary)
 
     image_url = _extract_image(entry)
 

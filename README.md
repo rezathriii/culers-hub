@@ -54,7 +54,8 @@ Key variables in `.env`:
 - `LLM_ENABLED` default `true`
 - `LLM_BASE_URL` default `http://localhost:9000`
 - `LLM_TIMEOUT` default `30`
-- `TRANSLATE_TO_PERSIAN` default `false`
+- `TRANSLATE_TO_ENGLISH` default `true`
+- `LLM_TRANSLATION_ENABLED` default `true`
 - `LLM_TRANSLATION_TIMEOUT` default `LLM_TIMEOUT`
 
 ## Feeds

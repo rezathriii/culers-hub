@@ -10,7 +10,7 @@ MAX_ARTICLE_AGE_HOURS = int(os.getenv("MAX_ARTICLE_AGE_HOURS", "1"))
 SEND_INTERVAL_SECONDS = int(os.getenv("SEND_INTERVAL_SECONDS", "60"))
 FEEDS_FILE = os.getenv("FEEDS_FILE", "/app/feeds.yaml")
 DEDUP_SIMILARITY_THRESHOLD = float(os.getenv("DEDUP_SIMILARITY_THRESHOLD", "0.35"))
-TRANSLATE_TO_PERSIAN = os.getenv("TRANSLATE_TO_PERSIAN", "false").lower() in (
+TRANSLATE_TO_ENGLISH = os.getenv("TRANSLATE_TO_ENGLISH", "true").lower() in (
     "1",
     "true",
     "yes",

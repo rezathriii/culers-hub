@@ -15,6 +15,11 @@ logger = logging.getLogger(__name__)
 LLM_BASE_URL = os.getenv("LLM_BASE_URL", "http://localhost:9000")
 LLM_ENABLED = os.getenv("LLM_ENABLED", "true").lower() in ("1", "true", "yes")
 LLM_TIMEOUT = int(os.getenv("LLM_TIMEOUT", "30"))
+LLM_TRANSLATION_ENABLED = os.getenv("LLM_TRANSLATION_ENABLED", "true").lower() in (
+    "1",
+    "true",
+    "yes",
+)
 LLM_TRANSLATION_TIMEOUT = int(os.getenv("LLM_TRANSLATION_TIMEOUT", str(LLM_TIMEOUT)))
 PROMPT_FILE = os.getenv("PROMPT_FILE", "/app/prompt.yaml")
 
@@ -83,14 +88,14 @@ def summarize(title: str, original_excerpt: str) -> str:
     return original_excerpt
 
 
-def translate_to_persian(text: str) -> str:
+def translate_to_english(text: str) -> str:
     """
-    Translate text to Persian using the same local LLM endpoint.
-    Returns original text if LLM is disabled or translation fails.
+    Translate text to English using the local LLM endpoint.
+    Returns original text if translation is disabled or the call fails.
     """
     if not text:
         return text
-    if not LLM_ENABLED:
+    if not LLM_TRANSLATION_ENABLED:
         return text
 
     payload = {
@@ -100,7 +105,7 @@ def translate_to_persian(text: str) -> str:
                 "role": "system",
                 "content": (
                     "You are a professional translator for football news. "
-                    "Translate the user text into fluent Persian (Farsi). "
+                    "Translate the user text into fluent natural English. "
                     "Preserve names, numbers, and football entities accurately. "
                     "Do not add explanations. Output only translated text."
                 ),
